@@ -29,6 +29,8 @@ async def get_me(user: User = Depends(get_current_user)):
         "createdAt": user.created_at.isoformat(),
         "lastLogin": user.last_login.isoformat(),
         "role": user.role,
+        "credits": user.credits,
+        "subscriptionExpiresAt": user.subscription_expires.isoformat() if user.subscription_expires else None,
     }
     if redis_client:
         await redis_client.set(cache_key, json.dumps(data), ex=60)

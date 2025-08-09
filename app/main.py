@@ -1,10 +1,12 @@
 import asyncio
+from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from .db import init_db, close_db
 from .core.security import verify_token
 from .models.calculation import Calculation
-from .routers import auth, user, calculations, admin
+from .models.user import User
+from .routers import auth, user, calculations, admin, billing
 from .services.openai_solver import stream_solution
 
 app = FastAPI(title="Math Solver API")
@@ -12,6 +14,7 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(calculations.router)
 app.include_router(admin.router)
+app.include_router(billing.router)
 
 
 @app.on_event("startup")
@@ -38,6 +41,12 @@ async def ws_calculate(websocket: WebSocket):
         await websocket.send_text("ERROR: Unauthorized (invalid or expired token)")
         await websocket.close()
         return
+    user = await User.get(payload.get("sub"))
+    if not user:
+        await websocket.accept()
+        await websocket.send_text("ERROR: User not found")
+        await websocket.close()
+        return
     await websocket.accept()
     try:
         while True:
@@ -52,6 +61,14 @@ async def ws_calculate(websocket: WebSocket):
                 continue
 
             try:
+                if user.subscription_expires and user.subscription_expires > datetime.utcnow():
+                    pass
+                elif user.credits > 0:
+                    user.credits -= 1
+                    await user.save()
+                else:
+                    await websocket.send_text("ERROR: No credits available")
+                    continue
                 result = await stream_solution(image_b64, websocket)
                 await Calculation(
                     user_id=payload.get("sub"), expression="", result_text=result
