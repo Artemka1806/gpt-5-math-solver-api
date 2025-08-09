@@ -32,7 +32,7 @@
 
     function appendOutput(text) {
       const output = document.getElementById('output');
-      output.textContent += text + '\n';
+      output.textContent += text;
       output.scrollTop = output.scrollHeight;
     }
 
@@ -44,14 +44,14 @@
       }
       ws = new WebSocket(`ws://localhost:8000/ws/calculate?token=${encodeURIComponent(token)}`);
       ws.onopen = () => {
-        appendOutput('[connected]');
+        appendOutput('\n[connected]\n');
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('disconnectBtn').disabled = false;
       };
       ws.onmessage = (event) => appendOutput(event.data);
       ws.onerror = (err) => appendOutput('ERROR: ' + err.message);
       ws.onclose = () => {
-        appendOutput('[disconnected]');
+        appendOutput('\n[disconnected]\n');
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('disconnectBtn').disabled = true;
       };
