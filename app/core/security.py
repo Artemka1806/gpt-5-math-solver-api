@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-
 import jwt
-
 
 from .config import settings
 
