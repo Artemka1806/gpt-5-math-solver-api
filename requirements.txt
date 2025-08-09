@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+beanie
+motor
+redis
+python-jose[cryptography]
+google-auth
+python-dotenv
+openai
+pydantic-settings
+email-validator
+requests
