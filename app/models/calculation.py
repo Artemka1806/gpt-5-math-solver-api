@@ -13,4 +13,3 @@ class Calculation(Document):
 
     class Settings:
         name = "calculations"
-

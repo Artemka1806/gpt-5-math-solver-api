@@ -11,7 +11,7 @@ async def stream_solution(image_b64: str, websocket) -> str:
 
     Returns the full response text.
     """
-    stream = client.responses.stream(
+    with client.responses.stream(
         model="gpt-4o-mini",
         input=[
             {
@@ -22,17 +22,16 @@ async def stream_solution(image_b64: str, websocket) -> str:
                 ],
             }
         ],
-    )
-
-    full_text = ""
-    for event in stream:
-        if event.type == "response.output_text.delta":
-            chunk = event.delta
-            full_text += chunk
-            await websocket.send_text(chunk)
-        elif event.type == "error":
-            await websocket.send_text(f"ERROR: {event.error.message}")
-            break
+    ) as stream:
+        full_text = ""
+        for event in stream:
+            if event.type == "response.output_text.delta":
+                chunk = event.delta
+                full_text += chunk
+                await websocket.send_text(chunk)
+            elif event.type == "error":
+                await websocket.send_text(f"ERROR: {event.error.message}")
+                break
 
     return full_text
 
