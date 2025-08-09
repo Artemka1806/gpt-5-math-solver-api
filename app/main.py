@@ -5,6 +5,7 @@ from .db import init_db, close_db
 from .core.security import verify_token
 from .models.calculation import Calculation
 from .routers import auth, user, calculations, admin
+from .services.openai_solver import stream_solution
 
 app = FastAPI(title="Math Solver API")
 app.include_router(auth.router)
@@ -44,12 +45,18 @@ async def ws_calculate(websocket: WebSocket):
             if data.get("action") != "solve":
                 await websocket.send_text("ERROR: Unknown action")
                 continue
-            await websocket.send_text("Solving...")
-            await asyncio.sleep(0.1)
-            # pretend to process image
-            result = "Equation solved"
-            await websocket.send_text(result)
-            await Calculation(user_id=payload.get("sub"), expression="", result_text=result).insert()
-            await websocket.send_text("[DONE]")
+            image_b64 = data.get("image")
+            if not image_b64:
+                await websocket.send_text("ERROR: image required")
+                continue
+
+            try:
+                result = await stream_solution(image_b64, websocket)
+                await Calculation(
+                    user_id=payload.get("sub"), expression="", result_text=result
+                ).insert()
+                await websocket.send_text("[DONE]")
+            except Exception as exc:
+                await websocket.send_text(f"ERROR: {exc}")
     except WebSocketDisconnect:
         pass

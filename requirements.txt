@@ -6,3 +6,4 @@ redis
 python-jose[cryptography]
 google-auth
 python-dotenv
+openai
