@@ -13,7 +13,4 @@ class Calculation(Document):
 
     class Settings:
         name = "calculations"
-        indexes = [
-            "user_id",
-            {"keys": {"expires_at": 1}, "expireAfterSeconds": 0},
-        ]
+
