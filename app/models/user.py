@@ -9,6 +9,8 @@ class User(Document):
     name: Optional[str]
     avatar: Optional[str]
     role: str = "user"
+    credits: int = 1
+    subscription_expires: Optional[datetime]
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_login: datetime = Field(default_factory=datetime.utcnow)
 

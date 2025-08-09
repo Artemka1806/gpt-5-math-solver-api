@@ -33,6 +33,9 @@ async def create_test_user(data: TestUserRequest):
     if not user:
         user = User(email=data.email, name=data.name, avatar=data.avatar)
         await user.insert()
+    if user.credits is None:
+        user.credits = 1
+        await user.save()
     access = create_token({"sub": str(user.id), "role": user.role})
     refresh = create_token(
         {"sub": str(user.id), "type": "refresh"},
@@ -46,6 +49,8 @@ async def create_test_user(data: TestUserRequest):
             "email": user.email,
             "name": user.name,
             "avatar": user.avatar,
+            "credits": user.credits,
+            "subscriptionExpiresAt": user.subscription_expires.isoformat() if user.subscription_expires else None,
         },
     )
 
@@ -67,6 +72,9 @@ async def google_login(data: GoogleLoginRequest):
             avatar=info.get("picture"),
         )
         await user.insert()
+    if user.credits is None:
+        user.credits = 1
+        await user.save()
     access = create_token({"sub": str(user.id), "role": user.role})
     refresh = create_token(
         {"sub": str(user.id), "type": "refresh"},
@@ -80,6 +88,8 @@ async def google_login(data: GoogleLoginRequest):
             "email": user.email,
             "name": user.name,
             "avatar": user.avatar,
+            "credits": user.credits,
+            "subscriptionExpiresAt": user.subscription_expires.isoformat() if user.subscription_expires else None,
         },
     )
 
