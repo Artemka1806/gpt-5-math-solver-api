@@ -45,6 +45,7 @@ async def ws_calculate(websocket: WebSocket):
             if data.get("action") != "solve":
                 await websocket.send_text("ERROR: Unknown action")
                 continue
+
             image_b64 = data.get("image")
             if not image_b64:
                 await websocket.send_text("ERROR: image required")
