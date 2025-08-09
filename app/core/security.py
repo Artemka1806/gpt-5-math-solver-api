@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from jose import JWTError, jwt
+
+import jwt
+
 
 from .config import settings
 
@@ -16,5 +18,5 @@ def create_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
 def verify_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError:
+    except jwt.PyJWTError:
         return {}

@@ -3,7 +3,7 @@ uvicorn
 beanie
 motor
 redis
-python-jose[cryptography]
+PyJWT
 google-auth
 python-dotenv
 openai
