@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     app_name: str = "Math Solver API"
     jwt_secret: str = "CHANGE_ME"
