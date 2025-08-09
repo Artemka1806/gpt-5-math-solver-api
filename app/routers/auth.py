@@ -83,7 +83,6 @@ async def google_login(data: GoogleLoginRequest):
         },
     )
 
-
 class RefreshRequest(BaseModel):
     refreshToken: str
 
@@ -93,9 +92,11 @@ async def refresh_token(data: RefreshRequest):
     payload = verify_token(data.refreshToken)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token")
+
     access = create_token(
         {"sub": payload.get("sub"), "role": payload.get("role", "user")}
     )
+
     return {"accessToken": access}
 
 

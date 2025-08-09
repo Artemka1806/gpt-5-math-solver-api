@@ -17,3 +17,4 @@ docker-compose up --build
 ```
 
 The service will be available at [http://localhost:8000](http://localhost:8000).
+
