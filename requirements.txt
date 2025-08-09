@@ -10,3 +10,4 @@ openai
 pydantic-settings
 email-validator
 requests
+websockets
