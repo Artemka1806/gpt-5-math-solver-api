@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math Solver WebSocket Client</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    #output { white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem; height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>WebSocket Math Solver</h1>
+  <label>
+    Access Token:
+    <input type="text" id="token" size="60" />
+  </label>
+  <br /><br />
+  <label>
+    Image:
+    <input type="file" id="image" accept="image/*" />
+  </label>
+  <br /><br />
+  <button id="connectBtn">Connect</button>
+  <button id="sendBtn" disabled>Send</button>
+  <button id="disconnectBtn" disabled>Disconnect</button>
+  <h2>Output</h2>
+  <div id="output"></div>
+
+  <script>
+    let ws;
+
+    function appendOutput(text) {
+      const output = document.getElementById('output');
+      output.textContent += text + '\n';
+      output.scrollTop = output.scrollHeight;
+    }
+
+    document.getElementById('connectBtn').onclick = () => {
+      const token = document.getElementById('token').value.trim();
+      if (!token) {
+        alert('Please provide an access token');
+        return;
+      }
+      ws = new WebSocket(`ws://localhost:8000/ws/calculate?token=${encodeURIComponent(token)}`);
+      ws.onopen = () => {
+        appendOutput('[connected]');
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('disconnectBtn').disabled = false;
+      };
+      ws.onmessage = (event) => appendOutput(event.data);
+      ws.onerror = (err) => appendOutput('ERROR: ' + err.message);
+      ws.onclose = () => {
+        appendOutput('[disconnected]');
+        document.getElementById('sendBtn').disabled = true;
+        document.getElementById('disconnectBtn').disabled = true;
+      };
+    };
+
+    document.getElementById('sendBtn').onclick = async () => {
+      const file = document.getElementById('image').files[0];
+      if (!file) {
+        alert('Please choose an image');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        ws.send(JSON.stringify({ action: 'solve', image: base64 }));
+      };
+      reader.readAsDataURL(file);
+    };
+
+    document.getElementById('disconnectBtn').onclick = () => {
+      if (ws) ws.close();
+    };
+  </script>
+</body>
+</html>
