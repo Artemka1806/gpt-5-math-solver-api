@@ -92,6 +92,7 @@
         ws.send(JSON.stringify({ action: 'solve', image: base64 }));
       };
       reader.readAsDataURL(file);
+      appendOutput('\n' + '[sending image]' + '\n');
     };
 
     document.getElementById('disconnectBtn').onclick = () => {
