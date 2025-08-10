@@ -4,7 +4,6 @@ from ..models.user import User
 from ..models.calculation import Calculation
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from ..db import redis_client
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -37,8 +36,6 @@ async def change_role(user_id: str, role: str):
         return {"message": "User not found"}
     user.role = role
     await user.save()
-    if redis_client:
-        await redis_client.delete(f"user:{user.id}")
     return {"id": user_id, "role": role}
 
 
@@ -62,8 +59,6 @@ async def grant(user_id: str, data: GrantRequest):
         )
         user.subscription_expires = base + timedelta(days=data.subscription_days)
     await user.save()
-    if redis_client:
-        await redis_client.delete(f"user:{user.id}")
     return {
         "id": user_id,
         "credits": user.credits,

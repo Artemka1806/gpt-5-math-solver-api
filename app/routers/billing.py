@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from ..dependencies import get_current_user
 from ..models.user import User
 from ..services.google_pay import verify_google_pay_token
-from ..db import redis_client
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 
@@ -33,8 +32,6 @@ async def google_pay_purchase(
         )
         user.subscription_expires = base + timedelta(days=data.subscription_days)
     await user.save()
-    if redis_client:
-        await redis_client.delete(f"user:{user.id}")
     return {
         "credits": user.credits,
         "subscriptionExpiresAt": user.subscription_expires.isoformat()
