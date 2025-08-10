@@ -4,11 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Math Solver WebSocket Client</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" integrity="sha384-GvrOXuhMATgEsSwCs4smul74iXGOixntILdUW9XmUC6+HX0sLNAK3q71HotJqlAn" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" integrity="sha384-cpW21h6RZv/phavutF+AuVYrr+dA8xD9zs6FwLpaCct6O9ctzYFfFr4dgmgccOTx" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; }
-    #output { white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem; height: 200px; overflow-y: auto; }
+    #output { 
+      white-space: pre-wrap; 
+      border: 1px solid #ccc; 
+      padding: 1rem; 
+      height: 500px; 
+      overflow-y: auto; 
+      line-height: 1.6;
+    }
     .image-section { display: flex; align-items: flex-start; gap: 1rem; margin: 1rem 0; }
     .image-preview { max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; display: none; }
+    .katex { font-size: 1.1em; }
+    .math-expression { 
+      background-color: #f8f9fa; 
+      padding: 0.2em 0.4em; 
+      border-radius: 3px; 
+      margin: 0.1em 0;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
@@ -29,16 +47,92 @@
   <button id="connectBtn">Connect</button>
   <button id="sendBtn" disabled>Send</button>
   <button id="disconnectBtn" disabled>Disconnect</button>
+  <button id="clearBtn">Clear Output</button>
   <h2>Output</h2>
   <div id="output"></div>
 
   <script>
     let ws;
+    let currentMessage = '';
+    let messageTimeout = null;
+
+    function renderLatex(text) {
+      // Парсинг inline math виразів ($...$)
+      text = text.replace(/\$([^$]+)\$/g, (match, latex) => {
+        try {
+          return katex.renderToString(latex, {displayMode: false, throwOnError: false});
+        } catch (e) {
+          return match; // Повертаємо оригінальний текст якщо помилка
+        }
+      });
+      
+      // Парсинг display math виразів ($$...$$)
+      text = text.replace(/\$\$([^$]+)\$\$/g, (match, latex) => {
+        try {
+          return katex.renderToString(latex, {displayMode: true, throwOnError: false});
+        } catch (e) {
+          return match; // Повертаємо оригінальний текст якщо помилка
+        }
+      });
+      
+      // Парсинг LaTeX блоків \[...\] та \(...\)
+      text = text.replace(/\\\[([^\]]+)\\\]/g, (match, latex) => {
+        try {
+          return katex.renderToString(latex, {displayMode: true, throwOnError: false});
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      text = text.replace(/\\\(([^)]+)\\\)/g, (match, latex) => {
+        try {
+          return katex.renderToString(latex, {displayMode: false, throwOnError: false});
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      return text;
+    }
 
     function appendOutput(text) {
       const output = document.getElementById('output');
-      output.textContent += text;
+      const renderedText = renderLatex(text);
+      
+      // Створюємо тимчасовий div для рендерингу HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = renderedText;
+      
+      // Додаємо текст з рендерованими LaTeX виразами
+      output.appendChild(tempDiv);
       output.scrollTop = output.scrollHeight;
+    }
+
+    function appendOutputRaw(text) {
+      const output = document.getElementById('output');
+      
+      // Створюємо тимчасовий div для рендерингу тексту без LaTeX парсингу
+      const tempDiv = document.createElement('div');
+      tempDiv.textContent = text;
+      
+      // Додаємо простий текст
+      output.appendChild(tempDiv);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function processAccumulatedMessage() {
+      if (currentMessage.trim()) {
+        // Очищаємо попередній raw текст, якщо він був
+        const output = document.getElementById('output');
+        const lastChild = output.lastElementChild;
+        if (lastChild && lastChild.classList.contains('raw-message')) {
+          output.removeChild(lastChild);
+        }
+        
+        // Додаємо оброблене повідомлення з LaTeX
+        appendOutput(currentMessage);
+        currentMessage = '';
+      }
     }
 
     // Handle image preview
@@ -67,16 +161,60 @@
       }
       ws = new WebSocket(`ws://localhost:8000/ws/calculate?token=${encodeURIComponent(token)}`);
       ws.onopen = () => {
-        appendOutput('\n'+'[connected]'+'\n');
+        appendOutput('\n[connected]\n');
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('disconnectBtn').disabled = false;
+        currentMessage = '';
       };
-      ws.onmessage = (event) => appendOutput(event.data);
-      ws.onerror = (err) => appendOutput('ERROR: ' + err.message);
+      ws.onmessage = (event) => {
+        const data = event.data;
+        
+        // Перевіряємо чи це службове повідомлення
+        if (data === '[DONE]') {
+          processAccumulatedMessage();
+          return;
+        }
+        
+        // Накопичуємо символи
+        currentMessage += data;
+        
+        // Відображаємо накопичений текст в реальному часі (без LaTeX парсингу)
+        const output = document.getElementById('output');
+        let lastRawDiv = output.lastElementChild;
+        
+        if (!lastRawDiv || !lastRawDiv.classList.contains('raw-message')) {
+          lastRawDiv = document.createElement('div');
+          lastRawDiv.classList.add('raw-message');
+          lastRawDiv.style.fontFamily = 'monospace';
+          lastRawDiv.style.color = '#666';
+          output.appendChild(lastRawDiv);
+        }
+        
+        lastRawDiv.textContent = currentMessage;
+        output.scrollTop = output.scrollHeight;
+        
+        // Скидаємо таймер і встановлюємо новий
+        if (messageTimeout) {
+          clearTimeout(messageTimeout);
+        }
+        
+        // Якщо протягом 1 секунди не було нових символів, обробляємо повідомлення
+        messageTimeout = setTimeout(() => {
+          processAccumulatedMessage();
+        }, 1000);
+      };
+      ws.onerror = (err) => {
+        appendOutput('\nERROR: ' + err.message + '\n');
+        currentMessage = '';
+      };
       ws.onclose = () => {
-        appendOutput('\n' + '[disconnected]' + '\n');
+        if (currentMessage.trim()) {
+          processAccumulatedMessage();
+        }
+        appendOutput('\n[disconnected]\n');
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('disconnectBtn').disabled = true;
+        currentMessage = '';
       };
     };
 
@@ -97,6 +235,15 @@
 
     document.getElementById('disconnectBtn').onclick = () => {
       if (ws) ws.close();
+    };
+
+    document.getElementById('clearBtn').onclick = () => {
+      document.getElementById('output').innerHTML = '';
+      currentMessage = '';
+      if (messageTimeout) {
+        clearTimeout(messageTimeout);
+        messageTimeout = null;
+      }
     };
   </script>
 </body>
