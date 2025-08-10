@@ -27,6 +27,16 @@
       margin: 0.1em 0;
       display: inline-block;
     }
+    .formatted-latex {
+      color: #000;
+      font-family: Arial, sans-serif;
+    }
+    .raw-message {
+      transition: all 0.3s ease;
+      font-family: Arial, sans-serif !important;
+      color: #000 !important;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -153,6 +163,58 @@
       output.scrollTop = output.scrollHeight;
     }
 
+    function tryFormatCompleteFormulas() {
+      // Шукаємо завершені формули та форматуємо їх
+      let hasChanges = false;
+      let workingMessage = currentMessage;
+      
+      // Спочатку обробляємо display формули $$...$$
+      workingMessage = workingMessage.replace(/\$\$([^$]+?)\$\$/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          hasChanges = true;
+          return '<span class="formatted-latex">' + katex.renderToString(cleanLatex, {displayMode: true, throwOnError: false, fleqn: true}) + '</span>';
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      // LaTeX display блоки \[...\]
+      workingMessage = workingMessage.replace(/\\\[([^\]]+?)\\\]/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          hasChanges = true;
+          return '<span class="formatted-latex">' + katex.renderToString(cleanLatex, {displayMode: true, throwOnError: false, fleqn: true}) + '</span>';
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      // LaTeX inline блоки \(...\)
+      workingMessage = workingMessage.replace(/\\\(([^)]+?)\\\)/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          hasChanges = true;
+          return '<span class="formatted-latex">' + katex.renderToString(cleanLatex, {displayMode: false, throwOnError: false}) + '</span>';
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      // Inline формули $...$
+      workingMessage = workingMessage.replace(/(?<!\$)\$([^$\n]+?)\$(?!\$)/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          hasChanges = true;
+          return '<span class="formatted-latex">' + katex.renderToString(cleanLatex, {displayMode: false, throwOnError: false}) + '</span>';
+        } catch (e) {
+          return match;
+        }
+      });
+      
+      return { formattedMessage: workingMessage, hasChanges };
+    }
+
     function processAccumulatedMessage() {
       if (currentMessage.trim()) {
         // Очищаємо попередній raw текст, якщо він був
@@ -162,26 +224,16 @@
           output.removeChild(lastChild);
         }
         
-        // Дебаг: виводимо в консоль необроблений текст для аналізу
-        console.log('Original message:', JSON.stringify(currentMessage));
+        // Пробуємо форматувати завершені формули
+        const { formattedMessage } = tryFormatCompleteFormulas();
         
-        // Показуємо коди символів для проблемних місць
-        const latexMatches = currentMessage.match(/\\\([^)]*\\\)/g);
-        if (latexMatches) {
-          latexMatches.forEach((match, index) => {
-            console.log(`LaTeX match ${index}:`, JSON.stringify(match));
-            for (let i = 0; i < match.length; i++) {
-              const char = match[i];
-              const code = char.charCodeAt(0);
-              if (code > 127 || code < 32) {
-                console.log(`Special char at pos ${i}: "${char}" (code: ${code})`);
-              }
-            }
-          });
-        }
+        // Створюємо div для остаточного тексту
+        const finalDiv = document.createElement('div');
+        finalDiv.innerHTML = formattedMessage;
         
-        // Додаємо оброблене повідомлення з LaTeX
-        appendOutput(currentMessage);
+        // Додаємо текст з рендерованими LaTeX виразами
+        output.appendChild(finalDiv);
+        output.scrollTop = output.scrollHeight;
         currentMessage = '';
       }
     }
@@ -229,19 +281,27 @@
         // Накопичуємо символи
         currentMessage += data;
         
-        // Відображаємо накопичений текст в реальному часі (без LaTeX парсингу)
+        // Відображаємо накопичений текст в реальному часі
         const output = document.getElementById('output');
         let lastRawDiv = output.lastElementChild;
         
         if (!lastRawDiv || !lastRawDiv.classList.contains('raw-message')) {
           lastRawDiv = document.createElement('div');
           lastRawDiv.classList.add('raw-message');
-          lastRawDiv.style.fontFamily = 'monospace';
-          lastRawDiv.style.color = '#666';
           output.appendChild(lastRawDiv);
         }
         
-        lastRawDiv.textContent = currentMessage;
+        // Пробуємо форматувати завершені формули
+        const { formattedMessage, hasChanges } = tryFormatCompleteFormulas();
+        
+        if (hasChanges) {
+          // Якщо є сформатовані формули, показуємо форматований текст
+          lastRawDiv.innerHTML = formattedMessage;
+        } else {
+          // Інакше показуємо простий текст
+          lastRawDiv.textContent = currentMessage;
+        }
+        
         output.scrollTop = output.scrollHeight;
         
         // Скидаємо таймер і встановлюємо новий
