@@ -48,6 +48,7 @@
   <button id="sendBtn" disabled>Send</button>
   <button id="disconnectBtn" disabled>Disconnect</button>
   <button id="clearBtn">Clear Output</button>
+  <button id="testBtn">Test LaTeX Parsing</button>
   <h2>Output</h2>
   <div id="output"></div>
 
@@ -57,37 +58,50 @@
     let messageTimeout = null;
 
     function renderLatex(text) {
-      // Парсинг inline math виразів ($...$)
-      text = text.replace(/\$([^$]+)\$/g, (match, latex) => {
-        try {
-          return katex.renderToString(latex, {displayMode: false, throwOnError: false});
-        } catch (e) {
-          return match; // Повертаємо оригінальний текст якщо помилка
-        }
-      });
+      // Очищаємо текст від зайвих символів та нормалізуємо
+      text = text.replace(/[\u200B-\u200D\uFEFF]/g, ''); // Видаляємо zero-width символи
+      text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'); // Нормалізуємо переноси рядків
       
-      // Парсинг display math виразів ($$...$$)
-      text = text.replace(/\$\$([^$]+)\$\$/g, (match, latex) => {
+      // Парсинг display math виразів ($$...$$) - спочатку обробляємо довгі формати
+      text = text.replace(/\$\$([^$]+?)\$\$/g, (match, latex) => {
         try {
-          return katex.renderToString(latex, {displayMode: true, throwOnError: false});
+          const cleanLatex = latex.trim();
+          return katex.renderToString(cleanLatex, {displayMode: true, throwOnError: false});
         } catch (e) {
-          return match; // Повертаємо оригінальний текст якщо помилка
-        }
-      });
-      
-      // Парсинг LaTeX блоків \[...\] та \(...\)
-      text = text.replace(/\\\[([^\]]+)\\\]/g, (match, latex) => {
-        try {
-          return katex.renderToString(latex, {displayMode: true, throwOnError: false});
-        } catch (e) {
+          console.log('LaTeX error ($$):', e.message, 'for:', latex);
           return match;
         }
       });
       
-      text = text.replace(/\\\(([^)]+)\\\)/g, (match, latex) => {
+      // Парсинг LaTeX display блоків \[...\]
+      text = text.replace(/\\\[([^\]]+?)\\\]/g, (match, latex) => {
         try {
-          return katex.renderToString(latex, {displayMode: false, throwOnError: false});
+          const cleanLatex = latex.trim();
+          return katex.renderToString(cleanLatex, {displayMode: true, throwOnError: false});
         } catch (e) {
+          console.log('LaTeX error (\\[\\]):', e.message, 'for:', latex);
+          return match;
+        }
+      });
+      
+      // Парсинг LaTeX inline блоків \(...\) з більш гнучким регексом
+      text = text.replace(/\\\(([^)]+?)\\\)/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          return katex.renderToString(cleanLatex, {displayMode: false, throwOnError: false});
+        } catch (e) {
+          console.log('LaTeX error (\\(\\)):', e.message, 'for:', latex);
+          return match;
+        }
+      });
+      
+      // Парсинг inline math виразів ($...$) - останніми, щоб не конфліктувати з $$
+      text = text.replace(/(?<!\$)\$([^$\n]+?)\$(?!\$)/g, (match, latex) => {
+        try {
+          const cleanLatex = latex.trim();
+          return katex.renderToString(cleanLatex, {displayMode: false, throwOnError: false});
+        } catch (e) {
+          console.log('LaTeX error ($):', e.message, 'for:', latex);
           return match;
         }
       });
@@ -97,11 +111,29 @@
 
     function appendOutput(text) {
       const output = document.getElementById('output');
-      const renderedText = renderLatex(text);
       
-      // Створюємо тимчасовий div для рендерингу HTML
+      // Створюємо div для тексту
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = renderedText;
+      tempDiv.innerHTML = renderLatex(text);
+      
+      // Альтернативний метод: використовуємо auto-render для додаткової обробки
+      try {
+        if (window.renderMathInElement) {
+          renderMathInElement(tempDiv, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$', right: '$', display: false},
+              {left: '\\[', right: '\\]', display: true},
+              {left: '\\(', right: '\\)', display: false}
+            ],
+            throwOnError: false,
+            errorColor: '#cc0000',
+            strict: false
+          });
+        }
+      } catch (e) {
+        console.log('Auto-render error:', e);
+      }
       
       // Додаємо текст з рендерованими LaTeX виразами
       output.appendChild(tempDiv);
@@ -127,6 +159,24 @@
         const lastChild = output.lastElementChild;
         if (lastChild && lastChild.classList.contains('raw-message')) {
           output.removeChild(lastChild);
+        }
+        
+        // Дебаг: виводимо в консоль необроблений текст для аналізу
+        console.log('Original message:', JSON.stringify(currentMessage));
+        
+        // Показуємо коди символів для проблемних місць
+        const latexMatches = currentMessage.match(/\\\([^)]*\\\)/g);
+        if (latexMatches) {
+          latexMatches.forEach((match, index) => {
+            console.log(`LaTeX match ${index}:`, JSON.stringify(match));
+            for (let i = 0; i < match.length; i++) {
+              const char = match[i];
+              const code = char.charCodeAt(0);
+              if (code > 127 || code < 32) {
+                console.log(`Special char at pos ${i}: "${char}" (code: ${code})`);
+              }
+            }
+          });
         }
         
         // Додаємо оброблене повідомлення з LaTeX
@@ -244,6 +294,21 @@
         clearTimeout(messageTimeout);
         messageTimeout = null;
       }
+    };
+
+    document.getElementById('testBtn').onclick = () => {
+      const testText = `Розглянемо ряд $\\sum_{n=1}^{\\infty} \\frac{(-1)^{n+1}}{\\ln(n + 1)}$.
+
+1) Збіжність за ознакою Лейбніца.
+- Покладемо \\(b_n=\\frac{1}{\\ln(n+1)}\\). Маємо $b_n > 0$ для всіх $n \\geq 1$.
+- Оскільки \\(\\ln(n+1)\\) зростає, то $b_{n+1} < b_n$, тобто $\\{b_n\\}$ спадна.
+- \\(\\displaystyle \\lim_{n\\to\\infty} b_n=\\lim_{n\\to\\infty}\\frac{1}{\\ln(n+1)}=0\\).
+
+Отже, за ознакою Лейбніца ряд збігається.
+
+2) Перевірка абсолютної збіжності.`;
+      
+      appendOutput(testText);
     };
   </script>
 </body>
