@@ -31,7 +31,7 @@ class TestUserRequest(BaseModel):
 async def create_test_user(data: TestUserRequest):
     user = await User.find_one(User.email == data.email)
     if not user:
-        user = User(email=data.email, name=data.name, avatar=data.avatar)
+        user = User(email=data.email, name=data.name, avatar=data.avatar, subscription_expires=None)
         await user.insert()
     if user.credits is None:
         user.credits = 1
@@ -70,6 +70,7 @@ async def google_login(data: GoogleLoginRequest):
             email=info.get("email"),
             name=info.get("name"),
             avatar=info.get("picture"),
+            subscription_expires=None,
         )
         await user.insert()
     if user.credits is None:

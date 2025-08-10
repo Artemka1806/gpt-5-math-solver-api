@@ -73,8 +73,8 @@ async def ws_calculate(websocket: WebSocket):
                 await Calculation(
                     user_id=payload.get("sub"), expression="", result_text=result
                 ).insert()
-                await websocket.send_text("[DONE]")
+                await websocket.send_text("\n[DONE]\n")
             except Exception as exc:
-                await websocket.send_text(f"ERROR: {exc}")
+                await websocket.send_text(f"\n[ERROR]: {exc}")
     except WebSocketDisconnect:
         pass

@@ -7,6 +7,8 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; }
     #output { white-space: pre-wrap; border: 1px solid #ccc; padding: 1rem; height: 200px; overflow-y: auto; }
+    .image-section { display: flex; align-items: flex-start; gap: 1rem; margin: 1rem 0; }
+    .image-preview { max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; display: none; }
   </style>
 </head>
 <body>
@@ -16,10 +18,13 @@
     <input type="text" id="token" size="60" />
   </label>
   <br /><br />
-  <label>
-    Image:
-    <input type="file" id="image" accept="image/*" />
-  </label>
+  <div class="image-section">
+    <label>
+      Image:
+      <input type="file" id="image" accept="image/*" />
+    </label>
+    <img id="imagePreview" class="image-preview" alt="Image preview" />
+  </div>
   <br /><br />
   <button id="connectBtn">Connect</button>
   <button id="sendBtn" disabled>Send</button>
@@ -36,6 +41,24 @@
       output.scrollTop = output.scrollHeight;
     }
 
+    // Handle image preview
+    document.getElementById('image').onchange = (event) => {
+      const file = event.target.files[0];
+      const preview = document.getElementById('imagePreview');
+      
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.style.display = 'none';
+        preview.src = '';
+      }
+    };
+
     document.getElementById('connectBtn').onclick = () => {
       const token = document.getElementById('token').value.trim();
       if (!token) {
@@ -44,14 +67,14 @@
       }
       ws = new WebSocket(`ws://localhost:8000/ws/calculate?token=${encodeURIComponent(token)}`);
       ws.onopen = () => {
-        appendOutput('\n[connected]\n');
+        appendOutput('\n'+'[connected]'+'\n');
         document.getElementById('sendBtn').disabled = false;
         document.getElementById('disconnectBtn').disabled = false;
       };
       ws.onmessage = (event) => appendOutput(event.data);
       ws.onerror = (err) => appendOutput('ERROR: ' + err.message);
       ws.onclose = () => {
-        appendOutput('\n[disconnected]\n');
+        appendOutput('\n' + '[disconnected]' + '\n');
         document.getElementById('sendBtn').disabled = true;
         document.getElementById('disconnectBtn').disabled = true;
       };

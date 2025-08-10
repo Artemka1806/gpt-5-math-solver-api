@@ -4,10 +4,7 @@ import os
 from openai import OpenAI
 
 
-# Initialize OpenAI client with API key from environment
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
 
 
 async def stream_solution(image_b64: str, websocket) -> str:
@@ -19,19 +16,17 @@ async def stream_solution(image_b64: str, websocket) -> str:
     
     try:
         stream = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5",
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Solve the math problem in this image. Provide a clear, step-by-step solution without any other text."},
+                        {"type": "text", "text": "Solve the math problem in this image. Provide a clear, step-by-step solution in ukrainian language without any other text."},
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ],
                 }
             ],
             stream=True,
-            max_tokens=1000,
-            temperature=0.1,
         )
         
         full_text = ""
@@ -45,6 +40,6 @@ async def stream_solution(image_b64: str, websocket) -> str:
         
     except Exception as e:
         error_msg = f"OpenAI API Error: {str(e)}"
-        await websocket.send_text(f"ERROR: {error_msg}")
+        await websocket.send_text(f"\n[ERROR]: {error_msg}]")
         raise e
 

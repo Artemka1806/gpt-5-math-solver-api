@@ -6,11 +6,11 @@ from pydantic import Field, EmailStr
 
 class User(Document):
     email: EmailStr
-    name: Optional[str]
-    avatar: Optional[str]
+    name: Optional[str] = None
+    avatar: Optional[str] = None
     role: str = "user"
     credits: int = 1
-    subscription_expires: Optional[datetime]
+    subscription_expires: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_login: datetime = Field(default_factory=datetime.utcnow)
 
