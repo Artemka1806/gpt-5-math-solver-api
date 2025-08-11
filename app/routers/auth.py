@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from pydantic import BaseModel, EmailStr
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
@@ -56,10 +56,29 @@ async def create_test_user(data: TestUserRequest):
 
 
 @router.post("/google-login", response_model=TokenResponse)
-async def google_login(data: GoogleLoginRequest):
+async def google_login(
+    request: Request,
+    idToken: str | None = None,
+    credential: str | None = Form(default=None),
+):
+    # Accept either JSON body with {"idToken"} or form with "credential" from Google Identity Services
+    if not idToken and credential:
+        idToken = credential
+    if not idToken:
+        # Try to parse JSON if sent as application/json
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                idToken = body.get("idToken") or body.get("credential")
+        except Exception:
+            pass
+    if not idToken:
+        raise HTTPException(status_code=422, detail="Missing idToken/credential")
+
+    audience = settings.google_client_id or None
     try:
         info = google_id_token.verify_oauth2_token(
-            data.idToken, google_requests.Request(), None
+            idToken, google_requests.Request(), audience
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid ID token") from e

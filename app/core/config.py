@@ -8,5 +8,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     access_token_expire_minutes: int = 15
     refresh_token_expire_minutes: int = 60 * 24 * 7
+    # Optional Google OAuth Client ID for verifying ID token audience
+    google_client_id: str | None = None
 
 settings = Settings()
