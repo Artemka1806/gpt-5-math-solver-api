@@ -101,7 +101,7 @@ async def google_login(
         {"sub": str(user.id), "type": "refresh"},
         timedelta(minutes=settings.refresh_token_expire_minutes),
     )
-    return RedirectResponse(url=f"{settings.redirect_url}?accessToken={access}&refreshToken={refresh}", status_code=status.HTTP_303_SEE_OTHE)
+    return RedirectResponse(url=f"{settings.redirect_url}?accessToken={access}&refreshToken={refresh}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 class RefreshRequest(BaseModel):
