@@ -72,6 +72,11 @@
     <input type="text" id="token" size="60" />
   </label>
   <br /><br />
+  <label>
+    Refresh Token:
+    <input type="text" id="refreshToken" size="60" />
+  </label>
+  <br /><br />
   <div class="image-section">
     <label>
       Image:
@@ -92,6 +97,35 @@
     let ws;
     let currentMessage = '';
     let messageTimeout = null;
+
+    function getTokenFromUrlOrStorage(parameterName) {
+      const urlParams = new URLSearchParams(window.location.search);
+      let tokenValue = urlParams.get(parameterName);
+      if (tokenValue && tokenValue.length > 0) {
+        try {
+          localStorage.setItem(parameterName, tokenValue);
+        } catch (_) {
+          // Ignore storage failures (e.g., Safari private mode)
+        }
+      } else {
+        try {
+          tokenValue = localStorage.getItem(parameterName) || '';
+        } catch (_) {
+          tokenValue = '';
+        }
+      }
+      return tokenValue;
+    }
+
+    // Populate inputs from URL parameters or localStorage
+    (function initializeTokens() {
+      const accessToken = getTokenFromUrlOrStorage('accessToken');
+      const refreshToken = getTokenFromUrlOrStorage('refreshToken');
+      const accessInput = document.getElementById('token');
+      const refreshInput = document.getElementById('refreshToken');
+      if (accessInput && accessToken) accessInput.value = accessToken;
+      if (refreshInput && refreshToken) refreshInput.value = refreshToken;
+    })();
 
     function renderLatex(text) {
       // Очищаємо текст від зайвих символів та нормалізуємо
