@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from pydantic import BaseModel, EmailStr
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
+from fastapi.responses import RedirectResponse
 
 from ..models.user import User
 from ..core.security import create_token, verify_token
@@ -55,7 +56,7 @@ async def create_test_user(data: TestUserRequest):
     )
 
 
-@router.post("/google-login", response_model=TokenResponse)
+@router.post("/google-login")
 async def google_login(
     request: Request,
     idToken: str | None = None,
@@ -100,18 +101,7 @@ async def google_login(
         {"sub": str(user.id), "type": "refresh"},
         timedelta(minutes=settings.refresh_token_expire_minutes),
     )
-    return TokenResponse(
-        accessToken=access,
-        refreshToken=refresh,
-        user={
-            "id": str(user.id),
-            "email": user.email,
-            "name": user.name,
-            "avatar": user.avatar,
-            "credits": user.credits,
-            "subscriptionExpiresAt": user.subscription_expires.isoformat() if user.subscription_expires else None,
-        },
-    )
+    return RedirectResponse(url=f"{settings.redirect_url}?accessToken={access}&refreshToken={refresh}")
 
 
 class RefreshRequest(BaseModel):
