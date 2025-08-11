@@ -21,7 +21,7 @@ async def stream_solution(image_b64: str, websocket) -> str:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Solve the math problem in this image. Provide a clear, step-by-step solution in ukrainian language without any other text. Use LaTeX for mathematical expressions."},
+                        {"type": "text", "text": "Solve the math problem in this image. Provide a clear, step-by-step solution in ukrainian language without any other text. Use LaTeX for mathematical expressions. If there are some words in the image that are not in Ukrainian, translate them to Ukrainian. If there punctuation marks right after a number/equation, put a space before the punctuation mark."},
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ],
                 }
