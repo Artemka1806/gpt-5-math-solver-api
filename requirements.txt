@@ -11,3 +11,4 @@ pydantic-settings
 email-validator
 requests
 websockets
+python-multipart
