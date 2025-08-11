@@ -322,7 +322,7 @@
         alert('Please provide an access token');
         return;
       }
-      ws = new WebSocket(`ws://localhost:8000/ws/calculate?token=${encodeURIComponent(token)}`);
+      ws = new WebSocket(`wss://gpt-math-solver.artemka1806.dev/ws/calculate?token=${encodeURIComponent(token)}`);
       ws.onopen = () => {
         appendOutput('\n[connected]\n');
         document.getElementById('sendBtn').disabled = false;

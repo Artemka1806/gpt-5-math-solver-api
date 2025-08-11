@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, Depends, Request, Form
+from fastapi import APIRouter, HTTPException, Depends, Request, status, Form
 from pydantic import BaseModel, EmailStr
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
@@ -101,7 +101,7 @@ async def google_login(
         {"sub": str(user.id), "type": "refresh"},
         timedelta(minutes=settings.refresh_token_expire_minutes),
     )
-    return RedirectResponse(url=f"{settings.redirect_url}?accessToken={access}&refreshToken={refresh}")
+    return RedirectResponse(url=f"{settings.redirect_url}?accessToken={access}&refreshToken={refresh}", status_code=status.HTTP_303_SEE_OTHE)
 
 
 class RefreshRequest(BaseModel):
