@@ -56,7 +56,7 @@ async def create_test_user(data: TestUserRequest):
     )
 
 
-@router.post("/google-login")
+@router.post("/google-login", response_model=TokenResponse)
 async def google_login(
     request: Request,
     idToken: str | None = None,
