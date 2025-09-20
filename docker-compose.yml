@@ -8,8 +8,8 @@ services:
     env_file:
       - .env
     environment:
-      MONGODB_URL: mongodb://mongo:27017/math-solver
-      REDIS_URL: redis://redis:6379/0
+      MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/math-solver?authSource=admin
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     depends_on:
       - mongo
       - redis
@@ -18,6 +18,9 @@ services:
     restart: always
     ports:
       - "8001:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
   redis:
@@ -25,6 +28,9 @@ services:
     restart: always
     ports:
       - "8002:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - redis_data:/data
 
