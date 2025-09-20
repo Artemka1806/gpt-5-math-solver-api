@@ -8,6 +8,18 @@ Prototype FastAPI application with Google login, JWT auth, calculation history, 
 uvicorn app.main:app --reload
 ```
 
+### Environment
+
+Copy `.env.example` to `.env` and set secrets:
+
+- `JWT_SECRET` — strong random value
+- `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` — Mongo root user (used by Docker)
+- `REDIS_PASSWORD` — Redis password (used by Docker)
+
+Notes:
+- Local non-Docker dev can use `MONGODB_URL` and `REDIS_URL` defaults pointing to `localhost`.
+- Docker Compose overrides `MONGODB_URL` and `REDIS_URL` for the API using the credentials above and service hosts `mongo`/`redis`.
+
 ### Docker
 
 Build and run the API along with MongoDB and Redis using Docker Compose:
